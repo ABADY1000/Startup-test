@@ -31,11 +31,11 @@ class webServerHandler(BaseHTTPRequestHandler):
                 startups = session.query(Startup).all()
                 output = ""
                 output += "<html><body>"
-                output += "<a href=\"/startups/new\">create startup!</a>"
+                output += '<a href="/startups/new">create startup!</a>'
                 output +="<br>"
                 for startup in startups:
                     output +="<br>"
-                    output += startup.name
+                    output += "<a href='/startups/%s/select'> %s</a> " % (startup.id,startup.name)
                     output +="<br>"
                     output += "<a href='/startups/%s/edit'> edit</a> "%startup.id
                     output += "<a href='/startups/%s/delete' > delete </a>"%startup.id
@@ -59,6 +59,36 @@ class webServerHandler(BaseHTTPRequestHandler):
                 self.wfile.write(output)
 
                 return
+
+            if self.path.endswith("/select"):
+                startup_id = self.path.split("/")[2]
+                startup = session.query(Startup).filter_by(id=startup_id).one();
+                founders= session.query(Startup,Founder.name).filter(Startup.id==Founder.startup_id).\
+                            filter(Startup.id==startup_id)
+
+                if startup:
+                    self.send_response(200)
+                    self.send_header('Content-type', 'text/html')
+                    self.end_headers()
+                    output = ""
+                    output += "<html><body><br>"
+                    output += '<p style="font-size:30px;"> StartUp name:<strong>  %s</strong> </p>'%(startup.name)
+                    output += "<p></p>"
+                    output += '<p style="font-size:25px;">Founders are: '
+                    output += '<ul style="font-size:20px;">'
+                    for founder in founders:
+                        output += "<li>%s</li>"%(founder.name)
+                    output += "</ul></p>"
+                    output += '<br>'
+                    output += '<h2>Add Founder</h2>'
+                    output += '<form method="post" enctype="multipart/form-data" >'
+                    output += '<input type="text" name="firstname" >'
+                    output += '<input type="submit" value="Add Founder"> '
+                    # output += 
+                    output += "</form></body></html>"
+                    self.wfile.write(output)
+
+                    return
 
             if self.path.endswith("/edit"):
                 startup_id = self.path.split("/")[2]
@@ -112,7 +142,7 @@ class webServerHandler(BaseHTTPRequestHandler):
                     session.add(startup)
                     session.commit()
                     self.send_response(301)
-                    self.send_header('content-type', "text/html")
+                    self.send_header('content-type', "text-content")
                     self.send_header('Location', "/startups")
                     self.end_headers()
 
@@ -145,6 +175,44 @@ class webServerHandler(BaseHTTPRequestHandler):
                     self.send_header('content-type', "text/html")
                     self.send_header('Location', "/startups")
                     self.end_headers()
+
+            if self.path.endswith('/select'):
+                id = self.path.split('/')[2]
+                ctype, pdict = cgi.parse_header(
+                    self.headers.getheader('content-type'))
+                if ctype == 'multipart/form-data':
+                    fields = cgi.parse_multipart(self.rfile, pdict)
+                    founder_name = fields.get('firstname')
+                    founder = Founder(name=founder_name[0],startup_id=id,bio='---')
+                    session.add(founder)
+                    session.commit()
+                    self.send_response(301)
+                    self.send_header('content-type', "text/html")
+                    self.send_header('Location', "/startups/%s/select"%id)
+                    self.end_headers()
+
+            # if self.path.endswith('/select'):
+            #     print('I am in get')
+            #     id = self.path.split('/')[2]
+            #     print(1)
+            #     ctype, pdict = cgi.parse_header(self.headers.getheader('content-type'))
+            #     print()
+            #     print(ctype == 'aaa')
+            #     if ctype == 'aaa':
+            #         print('I am inside if')
+            #         fields = cgi.parse_multipart(self.rfile, pdict)
+            #         founder_name = fields.get('firstname')
+            #         founder = Founder(name=founder_name[0],setup_id=id,bio='---')
+            #         session.add(startup)
+            #         session.commit()
+            #         self.send_response(301)
+            #         self.send_header('content-type', "text/html")
+            #         self.send_header('Location', "/startups/%s/select"%id)
+            #         self.end_headers()
+                    
+
+
+                
 
 
         except:
